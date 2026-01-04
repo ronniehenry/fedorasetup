@@ -1,5 +1,13 @@
 #!/bin/sh
 
+while [[ "$#" -gt 0 ]]; do
+   case $1 in
+       --host) MYHOSTNAME="$2"; shift ;; 
+       *) echo "Unknown parameter: $1"; exit 1 ;; 
+   esac 
+   shift 
+done
+
 # setup RPM Fusion
 sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
 
@@ -36,8 +44,8 @@ sudo dnf install -y libva-intel-driver
 sudo dnf install -y openh264 gstreamer1-plugin-openh264 mozilla-openh264
 sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1
 
-# Set hostname (replace negomi)
-hostnamectl set-hostname negomi
+# Set hostname (get hostname from input parameter --host)
+hostnamectl set-hostname $MYHOSTNAME
 
 # switch default editor to vim
 sudo dnf remove -y nano-default-editor
