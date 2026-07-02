@@ -64,7 +64,8 @@ flatpak install -y --noninteractive flathub \
   org.strawberrymusicplayer.strawberry \
   com.obsproject.Studio \
   org.localsend.localsend_app \
-  io.github.getnf.embellish
+  io.github.getnf.embellish \
+  dev.zed.Zed
 
 # Install compressed files support
 sudo dnf install -y unzip p7zip p7zip-plugins unrar
