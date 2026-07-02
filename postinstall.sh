@@ -98,7 +98,15 @@ sudo dnf install -y \
     gnome-shell-extension-dash-to-dock \
     gnome-shell-extension-just-perfection \
     gnome-shell-extension-user-theme \
-    gnome-shell-extension-appindicator
+    gnome-shell-extension-appindicator \
+    gnome-shell-extension-caffeine \
+    gnome-shell-extension-vitals
+
+# Clipboard Indicator isn't in Fedora's repos, so it's installed via gnome-extensions-cli
+# (gext), which fetches it directly from extensions.gnome.org by UUID.
+sudo dnf install -y pipx
+pipx install gnome-extensions-cli --system-site-packages || true   # already-installed is not an error
+"$HOME/.local/bin/gext" install clipboard-indicator@tudmotu.com
 
 # gnome-extensions enable talks to the running GNOME Shell over D-Bus, so it must
 # run as the logged-in user (no sudo) in an active graphical session. On Wayland
@@ -109,6 +117,9 @@ GNOME_EXTENSIONS=(
     just-perfection-desktop@just-perfection
     user-theme@gnome-shell-extensions.gcampax.github.com
     appindicatorsupport@rgcjonas.gmail.com
+    caffeine@patapon.info
+    Vitals@CoreCoding.com
+    clipboard-indicator@tudmotu.com
 )
 for ext in "${GNOME_EXTENSIONS[@]}"; do
     gnome-extensions enable "$ext" || log "Could not enable $ext yet - log out/in and enable it manually if needed"
