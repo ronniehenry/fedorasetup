@@ -1,81 +1,159 @@
-#!/bin/sh
+#!/usr/bin/env bash
+#
+# Fedora post-install script
+# Usage: ./postinstall.sh --host <hostname>
 
+set -euo pipefail
+
+log() { echo -e "\n\033[1;32m==>\033[0m $*"; }
+
+# dnf swap requires the "remove" package to be currently installed - it fails
+# on a rerun once the swap has already happened. This guards it so the script
+# is safe to run again on an already-provisioned system.
+swap_if_installed() {
+    local remove_pkg="$1" install_pkg="$2"
+    if rpm -q "$remove_pkg" &>/dev/null; then
+        sudo dnf swap -y "$remove_pkg" "$install_pkg" --allowerasing
+    else
+        log "$remove_pkg not installed, skipping swap (assuming $install_pkg already in place)"
+        sudo dnf install -y "$install_pkg"
+    fi
+}
+
+# ---- parse args ----
+MYHOSTNAME=""
 while [[ "$#" -gt 0 ]]; do
-   case $1 in
-       --host) MYHOSTNAME="$2"; shift ;; 
-       *) echo "Unknown parameter: $1"; exit 1 ;; 
-   esac 
-   shift 
+    case $1 in
+        --host) MYHOSTNAME="$2"; shift ;;
+        *) echo "Unknown parameter: $1"; exit 1 ;;
+    esac
+    shift
 done
 
-# setup RPM Fusion
-sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+if [[ -z "$MYHOSTNAME" ]]; then
+    echo "Error: --host <hostname> is required"
+    exit 1
+fi
 
-# upgrade core package
-sudo dnf group upgrade -y core
-sudo dnf4 group install -y core
+# ---- RPM Fusion ----
+log "Setting up RPM Fusion"
+sudo dnf install -y \
+    "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
+    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
+
+# ---- core upgrade ----
+# dnf5 (the default 'dnf' on current Fedora) has incomplete group support,
+# so 'core' group install/upgrade is done via the dnf4 compat binary.
+# Doing it via dnf4 AND plain dnf back-to-back was redundant/conflicting - pick one.
+log "Upgrading core group and system packages"
+sudo dnf4 group upgrade -y core
 sudo dnf -y update
 
-# Update firmware
+# ---- firmware ----
+log "Checking firmware updates"
 sudo fwupdmgr refresh --force
-sudo fwupdmgr get-devices # Lists devices with available updates.
-sudo fwupdmgr get-updates # Fetches list of available updates.
-sudo fwupdmgr update
+sudo fwupdmgr get-devices
+sudo fwupdmgr get-updates || true   # exits non-zero if no updates available; don't kill the script
+sudo fwupdmgr update -y
 
-# Install Flatpak
+# ---- Flatpak / Flathub ----
+log "Configuring Flathub"
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-# Install AppImage support
+# ---- AppImage support ----
+log "Installing AppImage support (gearlever)"
 sudo dnf install -y fuse fuse-libs
-flatpak install it.mijorus.gearlever
+flatpak install -y flathub it.mijorus.gearlever
 
-# Install media codecs
-sudo dnf4 group install multimedia
-sudo dnf swap 'ffmpeg-free' 'ffmpeg' --allowerasing # Switch to full FFMPEG.
-sudo dnf upgrade @multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin # Installs gstreamer components. Required if you use Gnome Videos and other dependent applications.
-sudo dnf group install -y sound-and-video # Installs useful Sound and Video complementary packages.
+# ---- media codecs ----
+log "Installing multimedia codecs"
+sudo dnf4 group install -y multimedia
+swap_if_installed 'ffmpeg-free' 'ffmpeg'
+sudo dnf upgrade -y @multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin
+sudo dnf4 group install -y sound-and-video
 
-# HW Video Decoding (VA-API)
+# ---- HW video decoding (VA-API) ----
+log "Setting up VA-API hardware video decoding"
 sudo dnf install -y ffmpeg-libs libva libva-utils
-sudo dnf swap libva-intel-media-driver intel-media-driver --allowerasing
-sudo dnf install -y libva-intel-driver
+swap_if_installed libva-intel-media-driver intel-media-driver
 
-# Setup h264 for Firefox
-sudo dnf install -y openh264 gstreamer1-plugin-openh264 mozilla-openh264
+# ---- H.264 for Firefox ----
+log "Enabling H.264 support for Firefox"
 sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1
+sudo dnf install -y openh264 gstreamer1-plugin-openh264 mozilla-openh264
 
-# Set hostname (get hostname from input parameter --host)
-hostnamectl set-hostname $MYHOSTNAME
+# ---- hostname ----
+log "Setting hostname to $MYHOSTNAME"
+sudo hostnamectl set-hostname "$MYHOSTNAME"
 
-# Switch default editor to vim
+# ---- default editor ----
+log "Switching default editor to vim"
 sudo dnf remove -y nano-default-editor
 sudo dnf install -y vim-default-editor
 
-# Install package groups
-sudo dnf group install development-tools c-development vlc editors
+# ---- GNOME Shell extensions ----
+log "Installing GNOME Shell extensions"
+sudo dnf install -y \
+    gnome-shell-extension-blur-my-shell \
+    gnome-shell-extension-dash-to-dock \
+    gnome-shell-extension-just-perfection \
+    gnome-shell-extension-user-theme \
+    gnome-shell-extension-appindicator
 
-# Install favorite gnome apps
+# gnome-extensions enable talks to the running GNOME Shell over D-Bus, so it must
+# run as the logged-in user (no sudo) in an active graphical session. On Wayland
+# it also won't visibly apply until you log out and back in.
+GNOME_EXTENSIONS=(
+    blur-my-shell@aunetx
+    dash-to-dock@micxgx.gmail.com
+    just-perfection-desktop@just-perfection
+    user-theme@gnome-shell-extensions.gcampax.github.com
+    appindicatorsupport@rgcjonas.gmail.com
+)
+for ext in "${GNOME_EXTENSIONS[@]}"; do
+    gnome-extensions enable "$ext" || log "Could not enable $ext yet - log out/in and enable it manually if needed"
+done
+
+# ---- package groups + individual packages ----
+log "Installing package groups and dev tools"
+sudo dnf4 group install -y development-tools c-development editors vlc
 sudo dnf install -y gnome-tweaks timeshift gimp inkscape transmission-gtk
 
-# Install favorite flatpak apps
-flatpak install -y --noninteractive flathub \
-  org.kde.kdenlive \
-  fr.handbrake.ghb \
-  org.strawberrymusicplayer.strawberry \
-  com.obsproject.Studio \
-  org.localsend.localsend_app \
-  io.github.getnf.embellish \
-  dev.zed.Zed
+# ---- VS Code ----
+log "Installing VS Code"
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+sudo tee /etc/yum.repos.d/vscode.repo > /dev/null << 'EOF'
+[code]
+name=Visual Studio Code
+baseurl=https://packages.microsoft.com/yumrepos/vscode
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+EOF
+sudo dnf check-update || true   # returns exit code 100 when updates are available; not a failure
+sudo dnf install -y code
 
-# Install compressed files support
+# ---- flatpak apps ----
+log "Installing Flatpak apps"
+flatpak install -y flathub \
+    org.kde.kdenlive \
+    fr.handbrake.ghb \
+    org.strawberrymusicplayer.strawberry \
+    org.localsend.localsend_app \
+    io.github.getnf.embellish \
+    com.mattjakeman.ExtensionManager \
+    dev.zed.Zed \
+    com.obsproject.Studio
+
+# ---- archive support ----
+log "Installing archive format support"
 sudo dnf install -y unzip p7zip p7zip-plugins unrar
 
-# Install VS Code
-sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc &&
-echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
-dnf check-update &&
-sudo dnf install code
-
-# Install zsh and ohmyzsh
+# ---- zsh + oh-my-zsh ----
+log "Installing zsh and Oh My Zsh"
 sudo dnf install -y zsh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+# --unattended: skip the interactive prompt and don't auto-launch a new zsh shell,
+# which would otherwise take over the terminal and halt the rest of the script.
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+
+log "Post-install complete. A reboot is recommended for firmware/kernel updates to take effect."
