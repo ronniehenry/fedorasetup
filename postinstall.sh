@@ -58,16 +58,23 @@ sudo dnf group install development-tools c-development vlc editors
 sudo dnf install -y gnome-tweaks timeshift gimp inkscape transmission-gtk
 
 # Install favorite flatpak apps
-flatpak install \
+flatpak install -y --noninteractive flathub \
   org.kde.kdenlive \
   fr.handbrake.ghb \
   org.strawberrymusicplayer.strawberry \
+  com.obsproject.Studio \
   org.localsend.localsend_app \
   io.github.getnf.embellish
 
-# install compressed files support
+# Install compressed files support
 sudo dnf install -y unzip p7zip p7zip-plugins unrar
 
-#install zsh and omz
+# Install VS Code
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc &&
+echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null
+dnf check-update &&
+sudo dnf install code
+
+# Install zsh and ohmyzsh
 sudo dnf install -y zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
