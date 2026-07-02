@@ -156,4 +156,7 @@ sudo dnf install -y zsh
 # which would otherwise take over the terminal and halt the rest of the script.
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
+log "Setting Oh My Zsh theme to bira"
+sed -i 's/^ZSH_THEME=.*/ZSH_THEME="bira"/' "$HOME/.zshrc"
+
 log "Post-install complete. A reboot is recommended for firmware/kernel updates to take effect."
