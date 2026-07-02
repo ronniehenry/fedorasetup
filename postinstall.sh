@@ -47,7 +47,7 @@ sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1
 # Set hostname (get hostname from input parameter --host)
 hostnamectl set-hostname $MYHOSTNAME
 
-# switch default editor to vim
+# Switch default editor to vim
 sudo dnf remove -y nano-default-editor
 sudo dnf install -y vim-default-editor
 
@@ -55,7 +55,19 @@ sudo dnf install -y vim-default-editor
 sudo dnf group install development-tools c-development vlc editors
 
 # Install favorite gnome apps
-sudo dnf install -y gnome-tweaks timeshift solaar gimp inkscape transmission-gtk
+sudo dnf install -y gnome-tweaks timeshift gimp inkscape transmission-gtk
+
+# Install favorite flatpak apps
+flatpak install \
+  org.kde.kdenlive \
+  fr.handbrake.ghb \
+  org.strawberrymusicplayer.strawberry \
+  org.localsend.localsend_app \
+  io.github.getnf.embellish
 
 # install compressed files support
 sudo dnf install -y unzip p7zip p7zip-plugins unrar
+
+#install zsh and omz
+sudo dnf install -y zsh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
