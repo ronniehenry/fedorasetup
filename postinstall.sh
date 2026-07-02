@@ -35,6 +35,15 @@ if [[ -z "$MYHOSTNAME" ]]; then
     exit 1
 fi
 
+# ---- dnf tuning ----
+log "Configuring /etc/dnf/dnf.conf"
+sudo tee /etc/dnf/dnf.conf > /dev/null << 'EOF'
+[main]
+max_parallel_downloads=20
+fastestmirror=True
+EOF
+sudo dnf -y upgrade
+
 # ---- RPM Fusion ----
 log "Setting up RPM Fusion"
 sudo dnf install -y \
