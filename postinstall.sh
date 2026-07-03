@@ -51,11 +51,8 @@ sudo dnf install -y \
     "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
 
 # ---- core upgrade ----
-# dnf5 (the default 'dnf' on current Fedora) has incomplete group support,
-# so 'core' group install/upgrade is done via the dnf4 compat binary.
-# Doing it via dnf4 AND plain dnf back-to-back was redundant/conflicting - pick one.
 log "Upgrading core group and system packages"
-sudo dnf4 group upgrade -y core
+sudo dnf group upgrade -y core
 sudo dnf -y update
 
 # ---- firmware ----
@@ -76,10 +73,10 @@ flatpak install -y flathub it.mijorus.gearlever
 
 # ---- media codecs ----
 log "Installing multimedia codecs"
-sudo dnf4 group install -y multimedia
+sudo dnf group install -y multimedia
 swap_if_installed 'ffmpeg-free' 'ffmpeg'
 sudo dnf upgrade -y @multimedia --setopt="install_weak_deps=False" --exclude=PackageKit-gstreamer-plugin
-sudo dnf4 group install -y sound-and-video
+sudo dnf group install -y sound-and-video
 
 # ---- HW video decoding (VA-API) ----
 log "Setting up VA-API hardware video decoding"
@@ -108,8 +105,7 @@ sudo dnf install -y \
     gnome-shell-extension-just-perfection \
     gnome-shell-extension-user-theme \
     gnome-shell-extension-appindicator \
-    gnome-shell-extension-caffeine \
-    gnome-shell-extension-vitals
+    gnome-shell-extension-caffeine
 
 # Clipboard Indicator isn't in Fedora's repos, so it's installed via gnome-extensions-cli
 # (gext), which fetches it directly from extensions.gnome.org by UUID.
@@ -127,7 +123,6 @@ GNOME_EXTENSIONS=(
     user-theme@gnome-shell-extensions.gcampax.github.com
     appindicatorsupport@rgcjonas.gmail.com
     caffeine@patapon.info
-    Vitals@CoreCoding.com
     clipboard-indicator@tudmotu.com
 )
 for ext in "${GNOME_EXTENSIONS[@]}"; do
@@ -136,7 +131,7 @@ done
 
 # ---- package groups + individual packages ----
 log "Installing package groups and dev tools"
-sudo dnf4 group install -y development-tools c-development editors vlc
+sudo dnf group install -y development-tools c-development editors vlc
 sudo dnf install -y gnome-tweaks timeshift gimp inkscape transmission-gtk
 
 # ---- VS Code ----
