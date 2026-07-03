@@ -113,21 +113,9 @@ sudo dnf install -y pipx
 pipx install gnome-extensions-cli --system-site-packages || true   # already-installed is not an error
 "$HOME/.local/bin/gext" install clipboard-indicator@tudmotu.com
 
-# gnome-extensions enable talks to the running GNOME Shell over D-Bus, so it must
-# run as the logged-in user (no sudo) in an active graphical session. On Wayland
-# it also won't visibly apply until you log out and back in.
-GNOME_EXTENSIONS=(
-    blur-my-shell@aunetx
-    dash-to-dock@micxgx.gmail.com
-    just-perfection-desktop@just-perfection
-    user-theme@gnome-shell-extensions.gcampax.github.com
-    appindicatorsupport@rgcjonas.gmail.com
-    caffeine@patapon.info
-    clipboard-indicator@tudmotu.com
-)
-for ext in "${GNOME_EXTENSIONS[@]}"; do
-    gnome-extensions enable "$ext" || log "Could not enable $ext yet - log out/in and enable it manually if needed"
-done
+# Extensions are left disabled here - gnome-extensions enable requires a live
+# D-Bus session that hasn't scanned these yet, so enable them manually via
+# Extension Manager or GNOME Extensions after logging in.
 
 # ---- package groups + individual packages ----
 log "Installing package groups and dev tools"
