@@ -162,4 +162,7 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/too
 log "Setting Oh My Zsh theme to bira"
 sed -i 's/^ZSH_THEME=.*/ZSH_THEME="bira"/' "$HOME/.zshrc"
 
+log "Setting zsh as the default shell"
+chsh -s $(which zsh)
+
 log "Post-install complete. A reboot is recommended for firmware/kernel updates to take effect."
