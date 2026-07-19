@@ -38,7 +38,8 @@ chmod +x postinstall.sh
 13. **Dev tools & apps** — `development-tools`, `c-development`, `editors`,
     `vlc` groups, plus GNOME Tweaks, Timeshift, GIMP, Inkscape, Transmission.
 14. **VS Code** — installed from Microsoft's official RPM repo.
-15. **Flatpak apps** — Kdenlive, HandBrake, Strawberry, LocalSend, Embellish,
+15. **Flatpak apps** — DevToolBox, Bitwarden, Arduino IDE, Kdenlive,
+    HandBrake, Strawberry, LocalSend, Embellish,
     Extension Manager, Zed, OBS Studio.
 16. **Archive support** — unzip, p7zip, unrar.
 17. **zsh + Oh My Zsh** — installed unattended, theme set to `bira`.
