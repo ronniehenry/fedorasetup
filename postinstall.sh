@@ -139,6 +139,9 @@ sudo dnf install -y code
 # ---- flatpak apps ----
 log "Installing Flatpak apps"
 flatpak install -y flathub \
+    me.iepure.devtoolbox \
+    com.bitwarden.desktop \
+    cc.arduino.IDE2 \
     org.kde.kdenlive \
     fr.handbrake.ghb \
     org.strawberrymusicplayer.strawberry \
