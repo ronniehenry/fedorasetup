@@ -97,6 +97,13 @@ log "Switching default editor to vim"
 sudo dnf remove -y nano-default-editor
 sudo dnf install -y vim-default-editor
 
+# ---- change terminal ----
+log "Removing Pytxis and installing Ghostty"
+sudo dnf copr enable scottames/ghostty
+sudo dnf install ghostty
+sudo dnf remove ptyxis
+gsettings set org.gnome.desktop.default-applications.terminal exec 'ghostty'
+
 # ---- GNOME Shell extensions ----
 log "Installing GNOME Shell extensions"
 sudo dnf install -y \
