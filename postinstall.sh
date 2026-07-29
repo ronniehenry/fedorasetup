@@ -60,16 +60,15 @@ log "Checking firmware updates"
 sudo fwupdmgr refresh --force
 sudo fwupdmgr get-devices
 sudo fwupdmgr get-updates || true   # exits non-zero if no updates available; don't kill the script
-sudo fwupdmgr update -y
+sudo fwupdmgr update -y || rc=$?
+if [[ ${rc:-0} -ne 0 && ${rc:-0} -ne 2 ]]; then
+    log "fwupdmgr update failed with exit code $rc"
+    exit "$rc"
+fi
 
 # ---- Flatpak / Flathub ----
 log "Configuring Flathub"
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-
-# ---- AppImage support ----
-log "Installing AppImage support (gearlever)"
-sudo dnf install -y fuse fuse-libs
-flatpak install -y flathub it.mijorus.gearlever
 
 # ---- media codecs ----
 log "Installing multimedia codecs"
@@ -99,9 +98,9 @@ sudo dnf install -y vim-default-editor
 
 # ---- change terminal ----
 log "Removing Pytxis and installing Ghostty"
-sudo dnf copr enable scottames/ghostty
-sudo dnf install ghostty
-sudo dnf remove ptyxis
+sudo dnf copr enable -y scottames/ghostty
+sudo dnf install -y ghostty
+sudo dnf remove -y ptyxis
 gsettings set org.gnome.desktop.default-applications.terminal exec 'ghostty'
 
 # ---- GNOME Shell extensions ----
@@ -113,12 +112,6 @@ sudo dnf install -y \
     gnome-shell-extension-user-theme \
     gnome-shell-extension-appindicator \
     gnome-shell-extension-caffeine
-
-# Clipboard Indicator isn't in Fedora's repos, so it's installed via gnome-extensions-cli
-# (gext), which fetches it directly from extensions.gnome.org by UUID.
-sudo dnf install -y pipx
-pipx install gnome-extensions-cli --system-site-packages || true   # already-installed is not an error
-"$HOME/.local/bin/gext" install clipboard-indicator@tudmotu.com
 
 # Extensions are left disabled here - gnome-extensions enable requires a live
 # D-Bus session that hasn't scanned these yet, so enable them manually via
@@ -155,12 +148,29 @@ flatpak install -y flathub \
     org.localsend.localsend_app \
     io.github.getnf.embellish \
     com.mattjakeman.ExtensionManager \
-    dev.zed.Zed \
     com.obsproject.Studio
 
 # ---- archive support ----
 log "Installing archive format support"
 sudo dnf install -y unzip p7zip p7zip-plugins unrar
+
+# ---- install custom cursors ----
+log "Installing custom cursors"
+sudo dnf copr enable -y peterwu/rendezvous
+sudo dnf install -y bibata-cursor-themes
+
+# ---- install favorite fonts ----
+log "Installing custom fonts"
+sudo dnf install -y lato-fonts
+
+# ---- install custom icons ----
+log "Installing custom icons"
+sudo dnf install -y papirus-icon-theme
+
+# ---- set icon colors ----
+log "Installing script to set custom icon colors"
+wget -qO- https://git.io/papirus-folders-install | sh
+papirus-folders -C green --theme Papirus-Dark
 
 # ---- zsh + oh-my-zsh ----
 log "Installing zsh and Oh My Zsh"
