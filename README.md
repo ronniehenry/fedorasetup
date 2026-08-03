@@ -19,36 +19,45 @@ chmod +x postinstall.sh
    and `fastestmirror=True`, then runs a full upgrade.
 2. **RPM Fusion** — enables free and nonfree repos.
 3. **Core upgrade** — `dnf group upgrade core` + full system update.
-4. **Firmware** — refreshes and applies updates via `fwupdmgr`. Exit code 2
+4. **Snapper + grub-btrfs rollback protection** — installs `snapper` and
+   `python3-dnf-plugin-snapper` (dnf-triggered pre/post snapshots, no timed
+   snapshots — `snapper-timeline.timer` is explicitly disabled), then
+   `grub-btrfs` via the `kylegospo/grub-btrfs` COPR so those snapshots are
+   bootable from the GRUB menu. Placed here, right after RPM Fusion/core
+   upgrade, so a rollback point exists before the riskier repo/codec steps
+   below run. Overrides the packaged `grub-btrfs.path` unit, since Fedora's
+   default layout makes `.snapshots` a nested subvolume rather than a real
+   mount point, which the shipped unit's mount dependency can't resolve.
+5. **Firmware** — refreshes and applies updates via `fwupdmgr`. Exit code 2
    (nothing to do) is treated as success; any other non-zero code stops the
    script.
-5. **Flatpak / Flathub** — adds the Flathub remote.
-6. **Multimedia codecs** — installs the `multimedia` and `sound-and-video`
+6. **Flatpak / Flathub** — adds the Flathub remote.
+7. **Multimedia codecs** — installs the `multimedia` and `sound-and-video`
    groups, swaps `ffmpeg-free` → `ffmpeg`.
-7. **VA-API hardware video decoding** — installs `libva`/`ffmpeg-libs`, swaps
+8. **VA-API hardware video decoding** — installs `libva`/`ffmpeg-libs`, swaps
    to `intel-media-driver`. **Intel-specific** — edit this section if running
    on AMD or Nvidia hardware.
-8. **H.264 for Firefox** — enables the Cisco OpenH264 repo and installs the plugin.
-9. **Hostname** — sets it to the value passed via `--host`.
-10. **Default editor** — swaps `nano-default-editor` → `vim-default-editor`.
-11. **Terminal** — enables a COPR repo for Ghostty, installs it, removes
+9. **H.264 for Firefox** — enables the Cisco OpenH264 repo and installs the plugin.
+10. **Hostname** — sets it to the value passed via `--host`.
+11. **Default editor** — swaps `nano-default-editor` → `vim-default-editor`.
+12. **Terminal** — enables a COPR repo for Ghostty, installs it, removes
     Ptyxis, and sets Ghostty as the default GNOME terminal.
-12. **GNOME Shell extensions** — installs via `dnf`: Blur My Shell, Dash to
+13. **GNOME Shell extensions** — installs via `dnf`: Blur My Shell, Dash to
     Dock, Just Perfection, User Themes, AppIndicator Support, Caffeine.
     **Installed but left disabled** — enable them manually via Extension
     Manager or GNOME Extensions after logging in.
-13. **Dev tools & apps** — `development-tools`, `c-development`, `editors`,
-    `vlc` groups, plus GNOME Tweaks, Timeshift, GIMP, Inkscape, Transmission.
-14. **VS Code** — installed from Microsoft's official RPM repo.
-15. **Flatpak apps** — DevToolBox, Bitwarden, Arduino IDE, Kdenlive,
+14. **Dev tools & apps** — `development-tools`, `c-development`, `editors`,
+    `vlc` groups, plus GNOME Tweaks, GIMP, Inkscape, Transmission.
+15. **VS Code** — installed from Microsoft's official RPM repo.
+16. **Flatpak apps** — DevToolBox, Bitwarden, Arduino IDE, Kdenlive,
     HandBrake, Strawberry, LocalSend, Embellish, Extension Manager, OBS Studio.
-16. **Archive support** — unzip, p7zip, unrar.
-17. **Custom cursors** — enables a COPR repo, installs the Bibata cursor theme.
-18. **Custom fonts** — installs Lato.
-19. **Custom icons** — installs the Papirus icon theme, then runs the
+17. **Archive support** — unzip, p7zip, unrar.
+18. **Custom cursors** — enables a COPR repo, installs the Bibata cursor theme.
+19. **Custom fonts** — installs Lato.
+20. **Custom icons** — installs the Papirus icon theme, then runs the
     upstream `papirus-folders` install script (fetched from `git.io`) to set
     folder color to green on the Dark variant.
-20. **zsh + Oh My Zsh** — installed unattended, theme set to `bira`, and zsh
+21. **zsh + Oh My Zsh** — installed unattended, theme set to `bira`, and zsh
     is set as the default login shell via `chsh`.
 
 ## Notes
@@ -67,7 +76,18 @@ chmod +x postinstall.sh
   preserved but not guaranteed long-term — if this step ever fails, pull the
   script directly from the `papirus-folders` GitHub repo instead.
 - **A reboot is recommended** after running, since firmware and kernel
-  updates may be pending.
+  updates may be pending. This is also the only way to confirm the Snapper +
+  grub-btrfs setup actually works — check the GRUB menu for a "Fedora Linux
+  snapshots" submenu before trusting the rollback protection.
+- **The `kylegospo/grub-btrfs` COPR is a real external dependency, not a
+  Fedora-maintained package.** `set -euo pipefail` means the script fails
+  loudly (not silently) if that project ever drops Fedora 44 support or is
+  renamed — same failure this section previously hit with an earlier,
+  wrong COPR name (`theoware/grub-btrfs`, which had no fedora-44 build).
+- **The `grub-btrfs.path` systemd unit is overridden**, not used as shipped —
+  the packaged unit depends on a `.snapshots.mount` unit that doesn't exist
+  on Fedora's default (nested-subvolume) layout, so this script replaces it
+  with one that watches `/.snapshots` directly.
 - Requires `sudo` privileges throughout; you'll be prompted for your password.
 
 ## Requirements
@@ -75,5 +95,5 @@ chmod +x postinstall.sh
 - Fedora Workstation (tested on Fedora 44)
 - A user account with `sudo` access
 - Internet access (RPM Fusion, Flathub, Microsoft's VS Code repo, Fedora
-  COPR for Ghostty and Bibata cursors, GitHub for Oh My Zsh, `git.io` for the
-  Papirus folder-color script)
+  COPR for Ghostty, `grub-btrfs`, and Bibata cursors, GitHub for Oh My Zsh,
+  `git.io` for the Papirus folder-color script)

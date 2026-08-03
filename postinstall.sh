@@ -55,6 +55,47 @@ log "Upgrading core group and system packages"
 sudo dnf group upgrade -y core
 sudo dnf -y update
 
+# ---- Snapper + grub-btrfs rollback protection ----
+# Placed here (after RPM Fusion/core upgrade, before firmware/codecs/etc.) so a
+# rollback point exists before the riskier repo/codec steps below run.
+# This is deliberately NOT timed snapshots - snapper-timeline.timer is disabled.
+# python3-dnf-plugin-snapper gives dnf-triggered pre/post snapshots instead.
+log "Setting up Snapper + grub-btrfs"
+sudo dnf install -y snapper python3-dnf-plugin-snapper
+
+if ! sudo snapper list-configs | grep -q '^root'; then
+    sudo snapper -c root create-config /
+else
+    log "Snapper root config already exists, skipping create-config"
+fi
+sudo chmod a+rx /.snapshots
+
+sudo systemctl disable --now snapper-timeline.timer 2>/dev/null || true
+sudo systemctl enable --now snapper-cleanup.timer
+
+sudo dnf copr enable -y kylegospo/grub-btrfs
+sudo dnf install -y grub-btrfs
+
+# Fedora's default layout makes .snapshots a nested subvolume, not a real mount
+# point, so the packaged grub-btrfs.path unit's mount dependency never
+# resolves. Override it to watch the path directly instead.
+sudo tee /etc/systemd/system/grub-btrfs.path > /dev/null << 'EOF'
+[Unit]
+Description=Monitors for new snapshots
+
+[Path]
+PathModified=/.snapshots
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now grub-btrfs.path
+sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+
+log "REMINDER: reboot and confirm the 'Fedora Linux snapshots' submenu appears in GRUB before trusting this setup."
+
 # ---- firmware ----
 log "Checking firmware updates"
 sudo fwupdmgr refresh --force
@@ -120,7 +161,7 @@ sudo dnf install -y \
 # ---- package groups + individual packages ----
 log "Installing package groups and dev tools"
 sudo dnf group install -y development-tools c-development editors vlc
-sudo dnf install -y gnome-tweaks timeshift gimp inkscape transmission-gtk
+sudo dnf install -y gnome-tweaks gimp inkscape transmission-gtk
 
 # ---- VS Code ----
 log "Installing VS Code"
