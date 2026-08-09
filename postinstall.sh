@@ -59,9 +59,12 @@ sudo dnf -y update
 # Placed here (after RPM Fusion/core upgrade, before firmware/codecs/etc.) so a
 # rollback point exists before the riskier repo/codec steps below run.
 # This is deliberately NOT timed snapshots - snapper-timeline.timer is disabled.
-# python3-dnf-plugin-snapper gives dnf-triggered pre/post snapshots instead.
+# python3-dnf-plugin-snapper is DNF4-only and does not hook into dnf5, which is
+# Fedora's default `dnf` since F41 - that's why snapshots never fired
+# automatically. libdnf5-plugin-actions is the dnf5-native replacement; the
+# actions file below reimplements the same pre/post transaction behavior.
 log "Setting up Snapper + grub-btrfs"
-sudo dnf install -y snapper python3-dnf-plugin-snapper
+sudo dnf install -y snapper libdnf5-plugin-actions
 
 if ! sudo snapper list-configs | grep -q '^root'; then
     sudo snapper -c root create-config /
@@ -69,6 +72,16 @@ else
     log "Snapper root config already exists, skipping create-config"
 fi
 sudo chmod a+rx /.snapshots
+
+sudo mkdir -p /etc/dnf/libdnf5-plugins/actions.d
+sudo tee /etc/dnf/libdnf5-plugins/actions.d/snapper.actions > /dev/null << 'EOF'
+# Emulates the old DNF4 snapper plugin under dnf5's actions-plugin architecture.
+# Creates a pre snapshot before the transaction, storing its number + description.
+pre_transaction::::/usr/bin/sh -c echo\ "tmp.snapper_desc=$(ps\ -o\ command\ --no-headers\ -p\ '${pid}')"
+pre_transaction::::/usr/bin/sh -c echo\ "tmp.snapper_pre_number=$(snapper\ create\ -t\ pre\ -p\ -d\ '${tmp.snapper_desc}')"
+# Creates the matching post snapshot once the transaction completes.
+post_transaction::::/usr/bin/sh -c [\ -n\ "${tmp.snapper_pre_number}"\ ]\ &&\ snapper\ create\ -t\ post\ --pre-number\ "${tmp.snapper_pre_number}"\ -d\ "${tmp.snapper_desc}";\ echo\ tmp.snapper_pre_number\ ;\ echo\ tmp.snapper_desc
+EOF
 
 sudo systemctl disable --now snapper-timeline.timer 2>/dev/null || true
 sudo systemctl enable --now snapper-cleanup.timer

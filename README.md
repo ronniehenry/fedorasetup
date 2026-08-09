@@ -20,14 +20,19 @@ chmod +x postinstall.sh
 2. **RPM Fusion** — enables free and nonfree repos.
 3. **Core upgrade** — `dnf group upgrade core` + full system update.
 4. **Snapper + grub-btrfs rollback protection** — installs `snapper` and
-   `python3-dnf-plugin-snapper` (dnf-triggered pre/post snapshots, no timed
-   snapshots — `snapper-timeline.timer` is explicitly disabled), then
-   `grub-btrfs` via the `kylegospo/grub-btrfs` COPR so those snapshots are
-   bootable from the GRUB menu. Placed here, right after RPM Fusion/core
-   upgrade, so a rollback point exists before the riskier repo/codec steps
-   below run. Overrides the packaged `grub-btrfs.path` unit, since Fedora's
-   default layout makes `.snapshots` a nested subvolume rather than a real
-   mount point, which the shipped unit's mount dependency can't resolve.
+   `libdnf5-plugin-actions`, then writes
+   `/etc/dnf/libdnf5-plugins/actions.d/snapper.actions` to create a pre/post
+   snapshot around every dnf transaction (no timed snapshots —
+   `snapper-timeline.timer` is explicitly disabled). **Uses the dnf5 actions
+   plugin, not `python3-dnf-plugin-snapper`** — that package is DNF4-only and
+   never hooks into dnf5, which is Fedora's default `dnf` since F41; using it
+   silently produces zero automatic snapshots. Also installs `grub-btrfs` via
+   the `kylegospo/grub-btrfs` COPR so snapshots are bootable from the GRUB
+   menu. Placed here, right after RPM Fusion/core upgrade, so a rollback
+   point exists before the riskier repo/codec steps below run. Overrides the
+   packaged `grub-btrfs.path` unit, since Fedora's default layout makes
+   `.snapshots` a nested subvolume rather than a real mount point, which the
+   shipped unit's mount dependency can't resolve.
 5. **Firmware** — refreshes and applies updates via `fwupdmgr`. Exit code 2
    (nothing to do) is treated as success; any other non-zero code stops the
    script.
