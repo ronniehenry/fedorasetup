@@ -26,13 +26,16 @@ chmod +x postinstall.sh
    `snapper-timeline.timer` is explicitly disabled). **Uses the dnf5 actions
    plugin, not `python3-dnf-plugin-snapper`** — that package is DNF4-only and
    never hooks into dnf5, which is Fedora's default `dnf` since F41; using it
-   silently produces zero automatic snapshots. Also installs `grub-btrfs` via
-   the `kylegospo/grub-btrfs` COPR so snapshots are bootable from the GRUB
-   menu. Placed here, right after RPM Fusion/core upgrade, so a rollback
-   point exists before the riskier repo/codec steps below run. Overrides the
-   packaged `grub-btrfs.path` unit, since Fedora's default layout makes
-   `.snapshots` a nested subvolume rather than a real mount point, which the
-   shipped unit's mount dependency can't resolve.
+   silently produces zero automatic snapshots. Sets `NUMBER_CLEANUP=yes` with
+   `NUMBER_LIMIT=20` / `NUMBER_LIMIT_IMPORTANT=10` so those dnf-triggered
+   snapshots — which have no Cleanup algorithm by default — actually get
+   pruned by `snapper-cleanup.timer` instead of accumulating forever. Also
+   installs `grub-btrfs` via the `kylegospo/grub-btrfs` COPR so snapshots are
+   bootable from the GRUB menu. Placed here, right after RPM Fusion/core
+   upgrade, so a rollback point exists before the riskier repo/codec steps
+   below run. Overrides the packaged `grub-btrfs.path` unit, since Fedora's
+   default layout makes `.snapshots` a nested subvolume rather than a real
+   mount point, which the shipped unit's mount dependency can't resolve.
 5. **Firmware** — refreshes and applies updates via `fwupdmgr`. Exit code 2
    (nothing to do) is treated as success; any other non-zero code stops the
    script.

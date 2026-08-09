@@ -83,6 +83,11 @@ pre_transaction::::/usr/bin/sh -c echo\ "tmp.snapper_pre_number=$(snapper\ creat
 post_transaction::::/usr/bin/sh -c [\ -n\ "${tmp.snapper_pre_number}"\ ]\ &&\ snapper\ create\ -t\ post\ --pre-number\ "${tmp.snapper_pre_number}"\ -d\ "${tmp.snapper_desc}";\ echo\ tmp.snapper_pre_number\ ;\ echo\ tmp.snapper_desc
 EOF
 
+# dnf-triggered pre/post snapshots have no Cleanup algorithm by default, so
+# with snapper-timeline disabled nothing would ever prune them. Cap by count
+# instead so snapper-cleanup.timer (still enabled) has something to act on.
+sudo snapper -c root set-config NUMBER_CLEANUP=yes NUMBER_LIMIT=20 NUMBER_LIMIT_IMPORTANT=10
+
 sudo systemctl disable --now snapper-timeline.timer 2>/dev/null || true
 sudo systemctl enable --now snapper-cleanup.timer
 
