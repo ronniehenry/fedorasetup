@@ -50,15 +50,13 @@ chmod +x postinstall.sh
 11. **Default editor** — swaps `nano-default-editor` → `vim-default-editor`.
 12. **Terminal** — enables a COPR repo for Ghostty, installs it, removes
     Ptyxis, and sets Ghostty as the default GNOME terminal.
-13. **GNOME Shell extensions** — installs via `dnf`: Blur My Shell, Dash to
-    Dock, Just Perfection, User Themes, AppIndicator Support, Caffeine.
-    **Installed but left disabled** — enable them manually via Extension
-    Manager or GNOME Extensions after logging in.
+13. **GNOME Shell extensions** — installs via `dnf`: Dash to Dock, User
+    Themes, AppIndicator Support. **Installed but left disabled** — enable
+    them manually via Extension Manager or GNOME Extensions after logging in.
 14. **Dev tools & apps** — `development-tools`, `c-development`, `editors`,
     `vlc` groups, plus GNOME Tweaks, GIMP, Inkscape, Transmission.
 15. **VS Code** — installed from Microsoft's official RPM repo.
-16. **Flatpak apps** — DevToolBox, Bitwarden, Arduino IDE, Kdenlive,
-    HandBrake, Strawberry, LocalSend, Embellish, Extension Manager, OBS Studio.
+16. **Flatpak apps** — Strawberry, Embellish, Extension Manager.
 17. **Archive support** — unzip, p7zip, unrar.
 18. **Custom cursors** — enables a COPR repo, installs the Bibata cursor theme.
 19. **Custom fonts** — installs Lato.

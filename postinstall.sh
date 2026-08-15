@@ -78,9 +78,9 @@ sudo tee /etc/dnf/libdnf5-plugins/actions.d/snapper.actions > /dev/null << 'EOF'
 # Emulates the old DNF4 snapper plugin under dnf5's actions-plugin architecture.
 # Creates a pre snapshot before the transaction, storing its number + description.
 pre_transaction::::/usr/bin/sh -c echo\ "tmp.snapper_desc=$(ps\ -o\ command\ --no-headers\ -p\ '${pid}')"
-pre_transaction::::/usr/bin/sh -c echo\ "tmp.snapper_pre_number=$(snapper\ create\ -t\ pre\ -p\ -d\ '${tmp.snapper_desc}')"
+pre_transaction::::/usr/bin/sh -c echo\ "tmp.snapper_pre_number=$(snapper\ create\ -t\ pre\ -c\ number\ -p\ -d\ '${tmp.snapper_desc}')"
 # Creates the matching post snapshot once the transaction completes.
-post_transaction::::/usr/bin/sh -c [\ -n\ "${tmp.snapper_pre_number}"\ ]\ &&\ snapper\ create\ -t\ post\ --pre-number\ "${tmp.snapper_pre_number}"\ -d\ "${tmp.snapper_desc}";\ echo\ tmp.snapper_pre_number\ ;\ echo\ tmp.snapper_desc
+post_transaction::::/usr/bin/sh -c [\ -n\ "${tmp.snapper_pre_number}"\ ]\ &&\ snapper\ create\ -t\ post\ -c\ number\ --pre-number\ "${tmp.snapper_pre_number}"\ -d\ "${tmp.snapper_desc}";\ echo\ tmp.snapper_pre_number\ ;\ echo\ tmp.snapper_desc
 EOF
 
 # dnf-triggered pre/post snapshots have no Cleanup algorithm by default, so
@@ -110,7 +110,7 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable --now grub-btrfs.path
-sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+sudo grub2-mkconfig -o "$(readlink -f /etc/grub2.cfg)"
 
 log "REMINDER: reboot and confirm the 'Fedora Linux snapshots' submenu appears in GRUB before trusting this setup."
 
@@ -165,12 +165,9 @@ gsettings set org.gnome.desktop.default-applications.terminal exec 'ghostty'
 # ---- GNOME Shell extensions ----
 log "Installing GNOME Shell extensions"
 sudo dnf install -y \
-    gnome-shell-extension-blur-my-shell \
     gnome-shell-extension-dash-to-dock \
-    gnome-shell-extension-just-perfection \
     gnome-shell-extension-user-theme \
-    gnome-shell-extension-appindicator \
-    gnome-shell-extension-caffeine
+    gnome-shell-extension-appindicator
 
 # Extensions are left disabled here - gnome-extensions enable requires a live
 # D-Bus session that hasn't scanned these yet, so enable them manually via
@@ -198,16 +195,9 @@ sudo dnf install -y code
 # ---- flatpak apps ----
 log "Installing Flatpak apps"
 flatpak install -y flathub \
-    me.iepure.devtoolbox \
-    com.bitwarden.desktop \
-    cc.arduino.IDE2 \
-    org.kde.kdenlive \
-    fr.handbrake.ghb \
     org.strawberrymusicplayer.strawberry \
-    org.localsend.localsend_app \
     io.github.getnf.embellish \
-    com.mattjakeman.ExtensionManager \
-    com.obsproject.Studio
+    com.mattjakeman.ExtensionManager
 
 # ---- archive support ----
 log "Installing archive format support"
