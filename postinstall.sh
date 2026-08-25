@@ -110,9 +110,12 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable --now grub-btrfs.path
-sudo grub2-mkconfig -o "$(readlink -f /etc/grub2.cfg)"
 
-log "REMINDER: reboot and confirm the 'Fedora Linux snapshots' submenu appears in GRUB before trusting this setup."
+# No grub2-mkconfig call here on purpose: the "Fedora Linux snapshots" submenu
+# only populates on the next kernel update, which force-regenerates grub.cfg
+# via the kernel-install/grubby hook. A manual grub2-mkconfig at install time
+# doesn't trigger it and isn't needed - it'll appear after the first kernel
+# update post-install, no action required.
 
 # ---- firmware ----
 log "Checking firmware updates"

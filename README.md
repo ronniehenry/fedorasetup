@@ -35,7 +35,11 @@ chmod +x postinstall.sh
    upgrade, so a rollback point exists before the riskier repo/codec steps
    below run. Overrides the packaged `grub-btrfs.path` unit, since Fedora's
    default layout makes `.snapshots` a nested subvolume rather than a real
-   mount point, which the shipped unit's mount dependency can't resolve.
+   mount point, which the shipped unit's mount dependency can't resolve. The
+   script does **not** run `grub2-mkconfig` itself — the "Fedora Linux
+   snapshots" submenu only populates on the next kernel update, which
+   force-regenerates `grub.cfg` via the kernel-install/grubby hook. A manual
+   `grub2-mkconfig` at install time does not trigger it.
 5. **Firmware** — refreshes and applies updates via `fwupdmgr`. Exit code 2
    (nothing to do) is treated as success; any other non-zero code stops the
    script.
@@ -82,9 +86,12 @@ chmod +x postinstall.sh
   preserved but not guaranteed long-term — if this step ever fails, pull the
   script directly from the `papirus-folders` GitHub repo instead.
 - **A reboot is recommended** after running, since firmware and kernel
-  updates may be pending. This is also the only way to confirm the Snapper +
-  grub-btrfs setup actually works — check the GRUB menu for a "Fedora Linux
-  snapshots" submenu before trusting the rollback protection.
+  updates may be pending.
+- **The "Fedora Linux snapshots" GRUB submenu will not appear on the first
+  post-install reboot.** It's populated by the kernel-install/grubby hook
+  that force-regenerates `grub.cfg` on kernel updates, not by anything this
+  script runs directly. It shows up after the *next* kernel update — don't
+  treat its absence right after install as a broken setup.
 - **The `kylegospo/grub-btrfs` COPR is a real external dependency, not a
   Fedora-maintained package.** `set -euo pipefail` means the script fails
   loudly (not silently) if that project ever drops Fedora 44 support or is
