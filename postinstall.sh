@@ -55,68 +55,6 @@ log "Upgrading core group and system packages"
 sudo dnf group upgrade -y core
 sudo dnf -y update
 
-# ---- Snapper + grub-btrfs rollback protection ----
-# Placed here (after RPM Fusion/core upgrade, before firmware/codecs/etc.) so a
-# rollback point exists before the riskier repo/codec steps below run.
-# This is deliberately NOT timed snapshots - snapper-timeline.timer is disabled.
-# python3-dnf-plugin-snapper is DNF4-only and does not hook into dnf5, which is
-# Fedora's default `dnf` since F41 - that's why snapshots never fired
-# automatically. libdnf5-plugin-actions is the dnf5-native replacement; the
-# actions file below reimplements the same pre/post transaction behavior.
-log "Setting up Snapper + grub-btrfs"
-sudo dnf install -y snapper libdnf5-plugin-actions
-
-if ! sudo snapper list-configs | grep -q '^root'; then
-    sudo snapper -c root create-config /
-else
-    log "Snapper root config already exists, skipping create-config"
-fi
-sudo chmod a+rx /.snapshots
-
-sudo mkdir -p /etc/dnf/libdnf5-plugins/actions.d
-sudo tee /etc/dnf/libdnf5-plugins/actions.d/snapper.actions > /dev/null << 'EOF'
-# Emulates the old DNF4 snapper plugin under dnf5's actions-plugin architecture.
-# Creates a pre snapshot before the transaction, storing its number + description.
-pre_transaction::::/usr/bin/sh -c echo\ "tmp.snapper_desc=$(ps\ -o\ command\ --no-headers\ -p\ '${pid}')"
-pre_transaction::::/usr/bin/sh -c echo\ "tmp.snapper_pre_number=$(snapper\ create\ -t\ pre\ -c\ number\ -p\ -d\ '${tmp.snapper_desc}')"
-# Creates the matching post snapshot once the transaction completes.
-post_transaction::::/usr/bin/sh -c [\ -n\ "${tmp.snapper_pre_number}"\ ]\ &&\ snapper\ create\ -t\ post\ -c\ number\ --pre-number\ "${tmp.snapper_pre_number}"\ -d\ "${tmp.snapper_desc}";\ echo\ tmp.snapper_pre_number\ ;\ echo\ tmp.snapper_desc
-EOF
-
-# dnf-triggered pre/post snapshots have no Cleanup algorithm by default, so
-# with snapper-timeline disabled nothing would ever prune them. Cap by count
-# instead so snapper-cleanup.timer (still enabled) has something to act on.
-sudo snapper -c root set-config NUMBER_CLEANUP=yes NUMBER_LIMIT=20 NUMBER_LIMIT_IMPORTANT=10
-
-sudo systemctl disable --now snapper-timeline.timer 2>/dev/null || true
-sudo systemctl enable --now snapper-cleanup.timer
-
-sudo dnf copr enable -y kylegospo/grub-btrfs
-sudo dnf install -y grub-btrfs
-
-# Fedora's default layout makes .snapshots a nested subvolume, not a real mount
-# point, so the packaged grub-btrfs.path unit's mount dependency never
-# resolves. Override it to watch the path directly instead.
-sudo tee /etc/systemd/system/grub-btrfs.path > /dev/null << 'EOF'
-[Unit]
-Description=Monitors for new snapshots
-
-[Path]
-PathModified=/.snapshots
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable --now grub-btrfs.path
-
-# No grub2-mkconfig call here on purpose: the "Fedora Linux snapshots" submenu
-# only populates on the next kernel update, which force-regenerates grub.cfg
-# via the kernel-install/grubby hook. A manual grub2-mkconfig at install time
-# doesn't trigger it and isn't needed - it'll appear after the first kernel
-# update post-install, no action required.
-
 # ---- firmware ----
 log "Checking firmware updates"
 sudo fwupdmgr refresh --force
@@ -167,10 +105,7 @@ gsettings set org.gnome.desktop.default-applications.terminal exec 'ghostty'
 
 # ---- GNOME Shell extensions ----
 log "Installing GNOME Shell extensions"
-sudo dnf install -y \
-    gnome-shell-extension-dash-to-dock \
-    gnome-shell-extension-user-theme \
-    gnome-shell-extension-appindicator
+sudo dnf install -y gnome-shell-extension-appindicator
 
 # Extensions are left disabled here - gnome-extensions enable requires a live
 # D-Bus session that hasn't scanned these yet, so enable them manually via
